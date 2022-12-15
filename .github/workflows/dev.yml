@@ -2,7 +2,7 @@ name: version bumper dev on push
 on:
   push:
     branches:
-      - dev-action
+      - dev
 jobs:
   build:
     runs-on: ubuntu-22.04
