@@ -1,0 +1,29 @@
+name: version bumper main on pull request
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: '0'
+        ref: ${{ github.ref_name }}
+
+    - name: bump-version-on-pull-request
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git fetch --tags
+        tagFmt="^1.[0-9]+\.[0-9]+$"
+        tag="$(git for-each-ref --sort=-v:refname --format '%(refname:lstrip=2)' | grep -E "$tagFmt" | head -n 1)"
+        [[ "$tag" =~ ^1.([0-9]+)\.([0-9]+) ]]
+        minor=${BASH_REMATCH[1]}
+        git tag -f "1.$(($minor+1)).0"
+        git push -f origin "1.$(($minor+1)).0"
