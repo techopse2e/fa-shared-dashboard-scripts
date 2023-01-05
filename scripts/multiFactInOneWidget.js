@@ -97,9 +97,40 @@
         widget.on('processresult', async (widget, event) => {
             await this.generateResultSeries(event);
             if (processresultCallback !== null) {
-                processresultCallback(widget, event);
+                await processresultCallback(widget, event);
             }
         });
+    }
+
+    async assignYAxisMaxValue (event) {
+        let stackType = 'Classic';
+        if (event.result.yAxis[0].hasOwnProperty('stackLabels')) {
+            if (event.result.yAxis[0].stackLabels.crop) {
+                stackType = 'Stacked';
+            } else {
+                stackType = 'Stack 100'
+            }
+        }
+        if (stackType === 'Stack 100') {
+            return
+        }
+        let totalValueMap = new Map();
+        event.result.series.forEach((series, formulaIndex) => {
+            series.data.forEach((value, index) => {
+                let y = value.y === null ? 0 : value.y;
+                if (!totalValueMap.has(index)) {
+                    totalValueMap.set(index, y);
+                } else {
+                    if (stackType === 'Classic' || this.resultConfig[formulaIndex].type !== 'column') {
+                        totalValueMap.set(index, Math.max(totalValueMap.get(index), y));
+                    } else {
+                        totalValueMap.set(index, totalValueMap.get(index) + y);
+                    }
+                }
+            });
+        });
+
+        event.result.yAxis[0].max = Math.max(...totalValueMap.values());
     }
 
     async generateResultSeries(event) {
@@ -139,6 +170,7 @@
         event.result.xAxis.categories = categories;
         event.result.series = series;
         event.rawResult.values = rawData;
+        await this.assignYAxisMaxValue(event);
     }
 
     generateFormulaId(){
