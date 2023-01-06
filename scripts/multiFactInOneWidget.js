@@ -62,7 +62,7 @@
         }
     }
 
-    initialize({widgetMetadataFunc=null, processresultCallback=null}={}) {
+    initialize({widgetMetadataFunc=null, processresultCallback=null, autoFixYMax=true}={}) {
         widget.on('beforequery',async (widget, query) => {
 
             this.reset();
@@ -99,6 +99,10 @@
             if (processresultCallback !== null) {
                 await processresultCallback(widget, event);
             }
+			console.log('autoFixYMax=', autoFixYMax);
+			if (autoFixYMax) {
+				await this.assignYAxisMaxValue(event);
+			}
         });
     }
 
@@ -170,7 +174,6 @@
         event.result.xAxis.categories = categories;
         event.result.series = series;
         event.rawResult.values = rawData;
-        await this.assignYAxisMaxValue(event);
     }
 
     generateFormulaId(){
