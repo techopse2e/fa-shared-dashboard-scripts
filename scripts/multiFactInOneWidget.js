@@ -1,5 +1,8 @@
 (class Jaql {
-    constructor() {
+    constructor({widgetMetadataFunc=null, processresultCallback=null, autoFixYMax=true}={}) {
+        this.widgetMetadataFunc = widgetMetadataFunc;
+        this.processresultCallback = processresultCallback;
+        this.autoFixYMax = autoFixYMax;
         this.reset()
     }
 
@@ -62,21 +65,21 @@
         }
     }
 
-    initialize({widgetMetadataFunc=null, processresultCallback=null, autoFixYMax=true}={}) {
+    initialize() {
         widget.on('beforequery',async (widget, query) => {
 
             this.reset();
             this.getJaqlReqUrl(query);
             this.getBaseMetadata(query);
 
-            if(widgetMetadataFunc === null) {
+            if(this.widgetMetadataFunc === null) {
                 this.getMetadataList(query);
                 this.formulaType = 'formulaGroups';
                 this.widgetRawDataPromise = this.getWidgetData();
                 return;
             }
 
-            let formulaInfo = widgetMetadataFunc(this);
+            let formulaInfo = this.widgetMetadataFunc(this);
             if (formulaInfo.hasOwnProperty('formulas')) {
                 this.formulaType = 'formulas';
                 this.addFormulas(formulaInfo.formulas, this.metadata);
@@ -96,13 +99,6 @@
 
         widget.on('processresult', async (widget, event) => {
             await this.generateResultSeries(event);
-            if (processresultCallback !== null) {
-                await processresultCallback(widget, event);
-            }
-			console.log('autoFixYMax=', autoFixYMax);
-			if (autoFixYMax) {
-				await this.assignYAxisMaxValue(event);
-			}
         });
     }
 
@@ -174,6 +170,13 @@
         event.result.xAxis.categories = categories;
         event.result.series = series;
         event.rawResult.values = rawData;
+
+        if (this.processresultCallback !== null) {
+            await this.processresultCallback(widget, event);
+        }
+        if (this.autoFixYMax) {
+            await this.assignYAxisMaxValue(event);
+        }
     }
 
     generateFormulaId(){
