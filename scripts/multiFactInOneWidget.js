@@ -42,6 +42,7 @@
             this.resultConfig.push({
                 title: formula.jaql.title,
                 color: formula.format.color.color,
+                type: formula.singleSeriesType || 'column',
             });
             this.metadataList.push([...this.baseMetadata, formula]);
         });
@@ -55,6 +56,7 @@
             this.resultConfig.push({
                 title: formulaConfig.title,
                 color: formulaConfig.color,
+                type: formulaConfig.singleSeriesType || 'column',
             });
         }
     }
@@ -128,6 +130,7 @@
             });
         });
 
+
         event.result.yAxis[0].max = Math.max(...totalValueMap.values());
     }
 
@@ -161,7 +164,8 @@
                 color: this.resultConfig[columnIndex - this.categoryNumber].color,
                 data: arr,
                 name: this.resultConfig[columnIndex - this.categoryNumber].title,
-                mask: mask
+                mask: mask,
+                type: this.resultConfig[columnIndex - this.categoryNumber].type
             });
         }
         event.result.xAxis.categories = categories;
