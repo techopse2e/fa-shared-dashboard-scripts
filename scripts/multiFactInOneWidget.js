@@ -19,8 +19,6 @@
         this.categoryNumber = 0;
         this.rawDataColumns = 0;
         this.widgetRawDataPromise = null;
-        this.forUIRefresh = false;
-        this.widgetDataCache = null;
     }
 
     getBaseMetadata(query) {
@@ -66,93 +64,41 @@
 
     initialize({widgetMetadataFunc=null, processresultCallback=null, autoFixYMax=true}={}) {
         widget.on('beforequery',async (widget, query) => {
-            if (!this.forUIRefresh) {
-                this.reset();
-                this.getJaqlReqUrl(query);
-                this.getBaseMetadata(query);
+            this.reset();
+            this.getJaqlReqUrl(query);
+            this.getBaseMetadata(query);
 
-                if(widgetMetadataFunc === null) {
-                    this.getMetadataList(query);
-                    this.formulaType = 'formulaGroups';
-                    this.widgetRawDataPromise = this.getWidgetData();
-                    return;
-                }
-
-                let formulaInfo = widgetMetadataFunc(this);
-                if (formulaInfo.hasOwnProperty('formulas')) {
-                    this.formulaType = 'formulas';
-                    this.addFormulas(formulaInfo.formulas, this.metadata);
-                } else if (formulaInfo.hasOwnProperty('formulaGroups')) {
-                    this.formulaType = 'formulaGroups';
-                    let columnNumber = [];
-                    for (let formulaConfigs of formulaInfo.formulaGroups) {
-                        let metadata = [];
-                        this.addFormulas(formulaConfigs, metadata);
-                        columnNumber.push(formulaConfigs.length);
-                        this.metadataList.push(metadata);
-                    }
-                    this.metadataListInfo.columnNumber = columnNumber;
-                }
+            if(widgetMetadataFunc === null) {
+                this.getMetadataList(query);
+                this.formulaType = 'formulaGroups';
                 this.widgetRawDataPromise = this.getWidgetData();
+                return;
             }
+
+            let formulaInfo = widgetMetadataFunc(this);
+            if (formulaInfo.hasOwnProperty('formulas')) {
+                this.formulaType = 'formulas';
+                this.addFormulas(formulaInfo.formulas, this.metadata);
+            } else if (formulaInfo.hasOwnProperty('formulaGroups')) {
+                this.formulaType = 'formulaGroups';
+                let columnNumber = [];
+                for (let formulaConfigs of formulaInfo.formulaGroups) {
+                    let metadata = [];
+                    this.addFormulas(formulaConfigs, metadata);
+                    columnNumber.push(formulaConfigs.length);
+                    this.metadataList.push(metadata);
+                }
+                this.metadataListInfo.columnNumber = columnNumber;
+            }
+            this.widgetRawDataPromise = this.getWidgetData();
         });
 
         widget.on('processresult', async (widget, event) => {
-            if (!this.forUIRefresh) {
-                await this.generateResultSeries(event);
-                if (processresultCallback !== null) {
-                    await processresultCallback(widget, event);
-                }
-                if (autoFixYMax) {
-                    await this.assignYAxisMaxValue(event);
-                }
-                this.widgetDataCache = {
-                    categories: event.result.xAxis.categories,
-                    series: event.result.series,
-                    rawData: event.rawResult.values,
-                    yMax: event.result.yAxis[0].max
-                }
-                this.forUIRefresh = true;
-                widget.redraw();
-            } else {
-                this.forUIRefresh = false;
-                event.result.xAxis.categories = this.widgetDataCache.categories;
-                event.result.series = this.widgetDataCache.series;
-                event.rawResult.values = this.widgetDataCache.rawData;
-                event.result.yAxis[0].max = this.widgetDataCache.yMax;
+            await this.generateResultSeries(event);
+            if (processresultCallback !== null) {
+                await processresultCallback(widget, event);
             }
         });
-    }
-
-    async assignYAxisMaxValue (event) {
-        let stackType = 'Classic';
-        if (event.result.yAxis[0].hasOwnProperty('stackLabels')) {
-            if (event.result.yAxis[0].stackLabels.crop) {
-                stackType = 'Stacked';
-            } else {
-                stackType = 'Stack 100'
-            }
-        }
-        if (stackType === 'Stack 100') {
-            return
-        }
-        let totalValueMap = new Map();
-        event.result.series.forEach((series, formulaIndex) => {
-            series.data.forEach((value, index) => {
-                let y = value.y === null ? 0 : value.y;
-                if (!totalValueMap.has(index)) {
-                    totalValueMap.set(index, y);
-                } else {
-                    if (stackType === 'Classic' || this.resultConfig[formulaIndex].type !== 'column') {
-                        totalValueMap.set(index, Math.max(totalValueMap.get(index), y));
-                    } else {
-                        totalValueMap.set(index, totalValueMap.get(index) + y);
-                    }
-                }
-            });
-        });
-
-        event.result.yAxis[0].max = Math.max(...totalValueMap.values());
     }
 
     async generateResultSeries(event) {
