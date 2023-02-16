@@ -18,9 +18,6 @@
         this.resultConfig = [];
         this.categoryNumber = 0;
         this.rawDataColumns = 0;
-        this.widgetRawDataPromise = null;
-        this.forUIRefresh = false;
-        this.widgetDataCache = null;
     }
 
     getBaseMetadata(query) {
@@ -65,66 +62,83 @@
     }
 
     initialize({widgetMetadataFunc=null, processresultCallback=null, autoFixYMax=true}={}) {
-        widget.on('beforequery',async (widget, query) => {
-            if (!this.forUIRefresh) {
-                this.reset();
-                this.getJaqlReqUrl(query);
-                this.getBaseMetadata(query);
+        widget.on('beforequery',(widget, query) => {
 
-                if(widgetMetadataFunc === null) {
-                    this.getMetadataList(query);
-                    this.formulaType = 'formulaGroups';
-                    this.widgetRawDataPromise = this.getWidgetData();
-                    return;
-                }
+            this.reset();
+            this.getJaqlReqUrl(query);
+            this.getBaseMetadata(query);
 
-                let formulaInfo = widgetMetadataFunc(this);
-                if (formulaInfo.hasOwnProperty('formulas')) {
-                    this.formulaType = 'formulas';
-                    this.addFormulas(formulaInfo.formulas, this.metadata);
-                } else if (formulaInfo.hasOwnProperty('formulaGroups')) {
-                    this.formulaType = 'formulaGroups';
-                    let columnNumber = [];
-                    for (let formulaConfigs of formulaInfo.formulaGroups) {
-                        let metadata = [];
-                        this.addFormulas(formulaConfigs, metadata);
-                        columnNumber.push(formulaConfigs.length);
-                        this.metadataList.push(metadata);
-                    }
-                    this.metadataListInfo.columnNumber = columnNumber;
+            if(widgetMetadataFunc === null) {
+                this.getMetadataList(query);
+                this.formulaType = 'formulaGroups';
+                return;
+            }
+
+            let formulaInfo = widgetMetadataFunc(this);
+            if (formulaInfo.hasOwnProperty('formulas')) {
+                this.formulaType = 'formulas';
+                this.addFormulas(formulaInfo.formulas, this.metadata);
+            } else if (formulaInfo.hasOwnProperty('formulaGroups')) {
+                this.formulaType = 'formulaGroups';
+                let columnNumber = [];
+                for (let formulaConfigs of formulaInfo.formulaGroups) {
+                    let metadata = [];
+                    this.addFormulas(formulaConfigs, metadata);
+                    columnNumber.push(formulaConfigs.length);
+                    this.metadataList.push(metadata);
                 }
-                this.widgetRawDataPromise = this.getWidgetData();
+                this.metadataListInfo.columnNumber = columnNumber;
             }
         });
 
         widget.on('processresult', async (widget, event) => {
-            if (!this.forUIRefresh) {
-                await this.generateResultSeries(event);
-                if (processresultCallback !== null) {
-                    await processresultCallback(widget, event);
-                }
-                this.widgetDataCache = {
-                    categories: event.result.xAxis.categories,
-                    series: event.result.series,
-                    rawData: event.rawResult.values
-                }
-                this.forUIRefresh = true;
-                widget.redraw();
-            } else {
-                this.forUIRefresh = false;
-                event.result.xAxis.categories = this.widgetDataCache.categories;
-                event.result.series = this.widgetDataCache.series;
-                event.rawResult.values = this.widgetDataCache.rawData;
+            this.generateResultSeries(event);
+            if (processresultCallback !== null) {
+                processresultCallback(widget, event)
+            }
+            if (autoFixYMax) {
+                this.assignYAxisMaxValue(event);
             }
         });
     }
 
-    async generateResultSeries(event) {
+    assignYAxisMaxValue (event) {
+        let stackType = 'Classic';
+        if (event.result.yAxis[0].hasOwnProperty('stackLabels')) {
+            if (event.result.yAxis[0].stackLabels.crop) {
+                stackType = 'Stacked';
+            } else {
+                stackType = 'Stack 100'
+            }
+        }
+        if (stackType === 'Stack 100') {
+            return
+        }
+        let totalValueMap = new Map();
+        event.result.series.forEach((series, formulaIndex) => {
+            series.data.forEach((value, index) => {
+                let y = value.y === null ? 0 : value.y;
+                if (!totalValueMap.has(index)) {
+                    totalValueMap.set(index, y);
+                } else {
+                    if (stackType === 'Classic' || this.resultConfig[formulaIndex].type !== 'column') {
+                        totalValueMap.set(index, Math.max(totalValueMap.get(index), y));
+                    } else {
+                        totalValueMap.set(index, totalValueMap.get(index) + y);
+                    }
+                }
+            });
+        });
+
+        event.result.yAxis[0].max = Math.max(...totalValueMap.values());
+    }
+
+    generateResultSeries(event) {
         let mask = null;
         if (event.result.series.length > 0) {
             mask = event.result.series[0].mask;
         }
-        let rawData = await this.widgetRawDataPromise;
+        let rawData = this.getWidgetData();
         let series = Array();
         let categories = [];
         if (rawData.length === 0) {
@@ -169,14 +183,14 @@
         return str;
     }
 
-    async getFilterValues(table, column, sort='asc', datasource=null) {
+    getFilterValues(table, column, sort='asc', datasource=null) {
         if (this.jaqlReqUrl === null) {
             if (datasource === null) {
                 throw 'datasource need to be specified'
             }
             this.jaqlReqUrl = `${window.location.protocol}//${window.location.host}/api/datasources/${encodeURIComponent(datasource)}/jaql`;
         }
-        return await this.getWidgetData([{ dim: `[${table}.${column}]`, sort: sort }]).map(x => x[0]);
+        return this.getWidgetData([{ dim: `[${table}.${column}]`, sort: sort }]).map(x => x[0]);
     }
 
     addFormula(formulaConfig, metadata) {
@@ -206,11 +220,11 @@
         this.rawDataColumns++;
     }
 
-    async getWidgetData(metadata=null) {
+    getWidgetData(metadata=null) {
         if (metadata !== null || this.formulaType === 'formulas') {
-            return await this.getJaqlData(metadata === null ? this.metadata : metadata);
+            return this.getJaqlData(metadata === null ? this.metadata : metadata)
         } else if (this.formulaType === 'formulaGroups') {
-            let rawDataList = await Promise.all(this.metadataList.map(metadata => this.getJaqlData(metadata)));
+            let rawDataList = this.metadataList.map(metadata => this.getJaqlData(metadata));
             let finalRawData = [...new Map(rawDataList.map(rawData => {
                 return rawData.map(row => [row.slice(0, this.categoryNumber).map(cell => cell.text).join(' | '), row.slice(0, this.categoryNumber)])
             }).flat()).entries()].sort((a, b) => a[1][0].data > b[1][0].data ? 1 : -1);
@@ -232,8 +246,8 @@
         }
     }
 
-    async getJaqlData(metadata) {
-        let options = {
+    getJaqlData(metadata) {
+        return $.ajax({
             headers: {
                 'content-type': 'application/json;charset=UTF-8',
             },
@@ -241,10 +255,7 @@
             url: this.jaqlReqUrl,
             data: JSON.stringify({datasource: this.dataSource, metadata: metadata}),
             contentType: 'application/json',
-            async: true
-        };
-        return new Promise(function (resolve, reject) {
-            $.ajax(options).done(data => resolve(data.values)).fail(reject);
-        });
+            async: false,
+        }).responseJSON.values;
     }
 })
