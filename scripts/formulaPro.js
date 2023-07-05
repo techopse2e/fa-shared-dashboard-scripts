@@ -15,7 +15,13 @@
     getDashboardFilterMap() {
         const filterValueMap = new Map();
         prism.activeDashboard.filters.$$items.forEach(metadata => {
-            filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
+            if (metadata.hasOwnProperty('levels')) {
+                metadata.levels.forEach(jaql => {
+                    filterValueMap.set(this.getFilterKey(jaql), jaql);
+                });
+            } else {
+                filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
+            }
         });
         return filterValueMap;
     }
@@ -24,15 +30,16 @@
         dashboard.on('widgetbeforequery',(widget, query) => {
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
-
-            query.query.metadata.filter(metadata => metadata.wpanel === 'series').forEach(metadata => {
+            query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
                     }
-                    if (context.hasOwnProperty('filter') && context.title.startsWith('@')) {
+                    if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1].split('(')[0];
-                        this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        if (typeof this[funcName] === 'function') {
+                            this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        }
                     }
                 }
             });
@@ -44,9 +51,11 @@
                         continue;
                     }
 
-                    if (context.hasOwnProperty('filter') && context.title.startsWith('@')) {
+                    if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1].split('(')[0];
-                        this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        if (typeof this[funcName] === 'function') {
+                            this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        }
                     }
 
                 }
@@ -92,7 +101,7 @@
     }
 
     getMostDetailedDateFilter(filterValueMap, context) {
-        for (let dateLevel of ['years', 'quarters', 'months', 'days']) {
+        for (let dateLevel of ['days', 'months', 'quarters', 'years']) {
             const filterKey = `${context.dim} | ${dateLevel}`
             if (filterValueMap.has(filterKey) && filterValueMap.get(filterKey).filter.hasOwnProperty('members')) {
                 return filterValueMap.get(filterKey);
