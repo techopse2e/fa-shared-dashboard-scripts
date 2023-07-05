@@ -97,7 +97,7 @@
     }
 
     getMostDetailedDateFilter(filterValueMap, context) {
-        for (let dateLevel of ['years', 'quarters', 'months', 'days']) {
+        for (let dateLevel of ['days', 'months', 'quarters', 'years']) {
             const filterKey = `${context.dim} | ${dateLevel}`
             if (filterValueMap.has(filterKey) && filterValueMap.get(filterKey).filter.hasOwnProperty('members')) {
                 return filterValueMap.get(filterKey);
