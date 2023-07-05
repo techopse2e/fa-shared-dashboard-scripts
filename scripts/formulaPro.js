@@ -37,7 +37,9 @@
                     }
                     if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1].split('(')[0];
-                        this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        if (typeof this[funcName] === 'function') {
+                            this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        }
                     }
                 }
             });
@@ -51,7 +53,9 @@
 
                     if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1].split('(')[0];
-                        this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        if (typeof this[funcName] === 'function') {
+                            this[funcName](activeFilterMap, dashboardFilterMap, context);
+                        }
                     }
 
                 }
