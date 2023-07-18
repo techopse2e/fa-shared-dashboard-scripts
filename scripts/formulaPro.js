@@ -73,7 +73,7 @@
         endDatetime.setUTCHours(23, 59, 59, 999);
 
         this.calculateDateRangeBeforeOffset(func_level, filter_level, startDatetime, endDatetime);
-        if (offset.length === 2 && endDatetime.getTime() !== 0) {
+        if (endDatetime.getTime() !== 0) {
             this.calculateDateRangeAfterOffset(offset, startDatetime, endDatetime, filter_level, func_level, selectedDate);
         }
 
@@ -194,7 +194,7 @@
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
-            const dateRange = offsetParams.length > 0 ? this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level, offsetParams) : this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
+            const dateRange = offsetParams.length === 2 ? this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level, offsetParams) : this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
             context.level = 'days';
             context.filter = {
                 from: dateRange.start_datetime,
