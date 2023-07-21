@@ -73,7 +73,7 @@
         endDatetime.setUTCHours(23, 59, 59, 999);
 
         this.calculateDateRangeBeforeOffset(func_level, filter_level, startDatetime, endDatetime);
-        if (endDatetime.getTime() !== 0) {
+        if (endDatetime.getTime() !== 0 && offsetParams.length === 2) {
             this.calculateDateRangeAfterOffset(offset, startDatetime, endDatetime, filter_level, func_level, selectedDate);
         }
 
@@ -87,25 +87,22 @@
     }
 
     calculateDateRangeBeforeOffset(func_level, filter_level, startDatetime, endDatetime) {
-        // start date only determined by function_level
-        if (func_level === 'years') {
+        if (this.isYTDFunction(func_level)) {
             startDatetime.setUTCMonth(0, 1);
-        } else if (func_level === 'quarters') {
+        } else if (this.isQTDFunction(func_level)) {
             const quarterMonth = Math.floor(startDatetime.getUTCMonth() / 3) * 3;
             startDatetime.setUTCMonth(quarterMonth, 1);
-        } else if (func_level === 'months') {
+        } else if (this.isMTDFunction(func_level)) {
             startDatetime.setUTCDate(1);
         }
 
-        // function_level should be larger than or equal to filter_level
-        // when rule above is satisfied, end date only determined by filter_level
         if (filter_level === 'years') {
-            if (func_level === 'years') {
+            if (this.isYTDFunction(func_level)) {
                 endDatetime.setUTCMonth(11, 31);
                 endDatetime.setUTCHours(23, 59, 59, 999);
             } else endDatetime.setTime(0);
         } else if (filter_level === 'quarters') {
-            if (func_level === 'years' || func_level === 'quarters') {
+            if (this.isYTDFunction(func_level)|| this.isQTDFunction(func_level)) {
                 const quarterMonth = Math.floor(endDatetime.getUTCMonth() / 3) * 3 + 2;
                 endDatetime.setUTCMonth(quarterMonth + 1, 0);
                 endDatetime.setUTCHours(23, 59, 59, 999);
@@ -119,60 +116,109 @@
     }
 
     calculateDateRangeAfterOffset(offset, startDatetime, endDatetime, filter_level, func_level, selectedDate) {
-        // offset_level should be larger than or equal to filter_level
         const offsetLevel = offset[0].trim();
         const offsetValue = parseInt(offset[1].trim());
 
         console.log('offsetLevel: ', offsetLevel);
         console.log('offsetValue: ', offsetValue);
 
-        if (offsetLevel === 'year') {
-            startDatetime.setUTCFullYear(startDatetime.getUTCFullYear() + offsetValue);
-            endDatetime.setUTCFullYear(endDatetime.getUTCFullYear() + offsetValue);
-        } else if (offsetLevel === 'quarter') {
-            if (filter_level === 'quarters' || filter_level === 'months' || filter_level === 'days') {
-                endDatetime.setUTCMonth(endDatetime.getUTCMonth() + offsetValue * 3 + 1, 0);
-                if (func_level === 'years') {
-                    // startDate = dateAfterOffset's year's first day
-                    selectedDate.setUTCMonth(selectedDate.getUTCMonth() + offsetValue * 3);
-                    startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), 0, 1);
-                } else {
-                    startDatetime.setUTCMonth(startDatetime.getUTCMonth() + offsetValue * 3);
-                }
-            }
-        } else if (offsetLevel === 'month') {
-            if (filter_level === 'months' || filter_level === 'days') {
-                endDatetime.setUTCMonth(endDatetime.getUTCMonth() + offsetValue + 1, 0);
-                if (func_level === 'years') {
-                    // startDate = dateAfterOffset's year's first day
-                    selectedDate.setUTCMonth(selectedDate.getUTCMonth() + offsetValue);
-                    startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), 0, 1);
-                } else if (func_level === 'quarters') {
-                    // startDate = dateAfterOffset's quarter's first day
-                    selectedDate.setUTCMonth(selectedDate.getUTCMonth() + offsetValue);
-                    startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), Math.floor((selectedDate.getUTCMonth() / 3)) * 3, 1);
-                } else {
-                    startDatetime.setUTCMonth(startDatetime.getUTCMonth() + offsetValue);
-                }
-            }
-        } else if (offsetLevel === 'day') {
-            if (filter_level === 'days') {
-                endDatetime.setUTCDate(endDatetime.getUTCDate() + offsetValue);
-                if (func_level === 'years') {
-                    // startDate = dateAfterOffset's year's first day
-                    selectedDate.setUTCDate(selectedDate.getUTCDate() + offsetValue);
-                    startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), 0, 1);
-                } else if (func_level === 'quarters') {
-                    // startDate = dateAfterOffset's quarter's first day
-                    selectedDate.setUTCDate(selectedDate.getUTCDate() + offsetValue);
-                    startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), Math.floor((selectedDate.getUTCMonth() / 3)) * 3, 1);
-                } else if (func_level === 'months') {
-                    // startDate = dateAfterOffset's month's first day
-                    selectedDate.setUTCDate(selectedDate.getUTCDate() + offsetValue);
-                    startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), selectedDate.getUTCMonth(), 1);
-                }
+        const startDateMonthAfterOffset = Math.floor((selectedDate.getUTCMonth() / 3)) * 3;
+        if (this.isYearlyOffset(offsetLevel)) {
+            this.handleYearlyOffsetDateRange(startDatetime, offsetValue, endDatetime);
+        } else if (this.isQuarterlyOffset(offsetLevel)) {
+            this.handleQuarterlyOffsetDateRange(filter_level, endDatetime, offsetValue, func_level, selectedDate, startDatetime);
+        } else if (this.isMonthlyOffset(offsetLevel)) {
+            this.handleMonthlyOffsetDateRange(filter_level, endDatetime, offsetValue, func_level, selectedDate, startDatetime, startDateMonthAfterOffset);
+        } else if (this.isDailyOffset(offsetLevel)) {
+            this.handleDailyOffsetDateRange(filter_level, endDatetime, offsetValue, func_level, selectedDate, startDatetime, startDateMonthAfterOffset);
+        }
+    }
+
+    handleYearlyOffsetDateRange(startDatetime, offsetValue, endDatetime) {
+        startDatetime.setUTCFullYear(startDatetime.getUTCFullYear() + offsetValue);
+        endDatetime.setUTCFullYear(endDatetime.getUTCFullYear() + offsetValue);
+    }
+
+    handleDailyOffsetDateRange(filter_level, endDatetime, offsetValue, func_level, selectedDate, startDatetime, startDateMonthAfterOffset) {
+        if (this.isFilterLevelSmallerThanDayOffsetLevel(filter_level)) {
+            endDatetime.setUTCDate(endDatetime.getUTCDate() + offsetValue);
+            if (this.isYTDFunction(func_level)) {
+                this.setXTDFunctionOffset(selectedDate, offsetValue, startDatetime, 0);
+            } else if (this.isQTDFunction(func_level)) {
+                this.setXTDFunctionOffset(selectedDate, offsetValue, startDatetime, startDateMonthAfterOffset);
+            } else if (this.isMTDFunction(func_level)) {
+                this.setXTDFunctionOffset(selectedDate, offsetValue, startDatetime, selectedDate.getUTCMonth());
             }
         }
+    }
+
+    handleMonthlyOffsetDateRange(filter_level, endDatetime, offsetValue, func_level, selectedDate, startDatetime, startDateMonthAfterOffset) {
+        if (this.isFilterLevelSmallerThanMonthOffsetLevel(filter_level)) {
+            endDatetime.setUTCMonth(endDatetime.getUTCMonth() + offsetValue + 1, 0);
+            if (this.isYTDFunction(func_level)) {
+                this.setXTDFunctionOffset(selectedDate, offsetValue, startDatetime, 0);
+            } else if (this.isQTDFunction(func_level)) {
+                this.setXTDFunctionOffset(selectedDate, offsetValue, startDatetime, startDateMonthAfterOffset);
+            } else {
+                startDatetime.setUTCMonth(startDatetime.getUTCMonth() + offsetValue);
+            }
+        }
+    }
+
+    handleQuarterlyOffsetDateRange(filter_level, endDatetime, offsetValue, func_level, selectedDate, startDatetime) {
+        if (this.isFilterLevelSmallerThanQuarterOffsetLevel(filter_level)) {
+            endDatetime.setUTCMonth(endDatetime.getUTCMonth() + offsetValue * 3 + 1, 0);
+            if (this.isYTDFunction(func_level)) {
+                this.setXTDFunctionOffset(selectedDate, offsetValue * 3, startDatetime, 0);
+            } else {
+                startDatetime.setUTCMonth(startDatetime.getUTCMonth() + offsetValue * 3);
+            }
+        }
+    }
+
+    setXTDFunctionOffset(selectedDate, offsetValue, startDatetime, month) {
+        selectedDate.setUTCMonth(selectedDate.getUTCMonth() + offsetValue);
+        startDatetime.setUTCFullYear(selectedDate.getUTCFullYear(), month, 1);
+    }
+
+    isMTDFunction(func_level) {
+        return func_level === 'months';
+    }
+
+    isQTDFunction(func_level) {
+        return func_level === 'quarters';
+    }
+
+    isYTDFunction(func_level) {
+        return func_level === 'years';
+    }
+
+    isDailyOffset(offsetLevel) {
+        return offsetLevel === 'day';
+    }
+
+    isMonthlyOffset(offsetLevel) {
+        return offsetLevel === 'month';
+    }
+
+    isQuarterlyOffset(offsetLevel) {
+        return offsetLevel === 'quarter';
+    }
+
+    isYearlyOffset(offsetLevel) {
+        return offsetLevel === 'year';
+    }
+
+    isFilterLevelSmallerThanDayOffsetLevel(filter_level) {
+        return filter_level === 'days';
+    }
+
+    isFilterLevelSmallerThanMonthOffsetLevel(filter_level) {
+        return filter_level === 'months' || filter_level === 'days';
+    }
+
+    isFilterLevelSmallerThanQuarterOffsetLevel(filter_level) {
+        return filter_level === 'quarters' || filter_level === 'months' || filter_level === 'days';
     }
 
     getMostDetailedDateFilter(filterValueMap, context) {
@@ -194,7 +240,9 @@
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
-            const dateRange = offsetParams.length === 2 ? this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level, offsetParams) : this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
+            const dateRange = offsetParams.length === 2 ?
+                this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level, offsetParams) :
+                this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
             context.level = 'days';
             context.filter = {
                 from: dateRange.start_datetime,
