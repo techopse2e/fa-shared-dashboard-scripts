@@ -73,7 +73,7 @@
         endDatetime.setUTCHours(23, 59, 59, 999);
 
         this.calculateDateRangeBeforeOffset(func_level, filter_level, startDatetime, endDatetime);
-        if (endDatetime.getTime() !== 0 && offsetParams.length === 2) {
+        if (endDatetime.getTime() !== 0 && offset.length === 2) {
             this.calculateDateRangeAfterOffset(offset, startDatetime, endDatetime, filter_level, func_level, selectedDate);
         }
 
