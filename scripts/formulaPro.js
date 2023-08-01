@@ -117,7 +117,8 @@
 
     calculateDateRangeAfterOffset(offset, startDatetime, endDatetime, filter_level, func_level, selectedDate) {
         const offsetLevel = offset[0].trim();
-        const offsetValue = parseInt(offset[1].trim());
+        const tempOffsetValue = parseInt(offset[1].trim());
+        const offsetValue = isNaN(tempOffsetValue) ? 0 : tempOffsetValue;
 
         console.log('offsetLevel: ', offsetLevel);
         console.log('offsetValue: ', offsetValue);
