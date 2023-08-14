@@ -4,7 +4,9 @@
 // given 2022-10-01 and level is year, will return 2022-01-01 - 2022-12-31
 
 (class WholeQuarterOrYearDataRange {
-
+    getFilterKey(jaql) {
+        return `${jaql.dim} | ${jaql.level}`
+    }
     getActiveFilterMap(query) {
         const filterValueMap = new Map();
         query.query.metadata.filter(metadata => metadata.panel === 'scope' && !metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
