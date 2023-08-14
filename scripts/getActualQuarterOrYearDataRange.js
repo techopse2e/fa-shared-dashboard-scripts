@@ -40,7 +40,7 @@
                         continue;
                     }
                     if (context.title.startsWith('@')) {
-                        const funcName = '__' + context.title.split('@')[1].split('(')[0];
+                        const funcName = '__' + context.title.split('@')[1];
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
@@ -55,7 +55,7 @@
                     }
 
                     if (context.title.startsWith('@')) {
-                        const funcName = '__' + context.title.split('@')[1].split('(')[0];
+                        const funcName = '__' + context.title.split('@')[1];
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
@@ -86,11 +86,11 @@
     }
 
     calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime) {
-        if (this.isYTDFunction(func_level)) {
+        if (this.isYearFunction(func_level)) {
             startDatetime.setUTCMonth(0, 1);
             endDatetime.setUTCMonth(11, 31);
             endDatetime.setUTCHours(23, 59, 59, 999);
-        } else if (this.isQTDFunction(func_level)) {
+        } else if (this.isQuarterFunction(func_level)) {
             const quarterStartMonth = Math.floor(startDatetime.getUTCMonth() / 3) * 3;
             startDatetime.setUTCMonth(quarterStartMonth, 1);
 
@@ -101,11 +101,11 @@
 
     }
 
-    isQTDFunction(func_level) {
+    isQuarterFunction(func_level) {
         return func_level === 'quarters';
     }
 
-    isYTDFunction(func_level) {
+    isYearFunction(func_level) {
         return func_level === 'years';
     }
 
@@ -119,7 +119,7 @@
         return null;
     }
 
-    WholeDataRange(context, funcDTLevel) {
+    WholeDataRange(activeFilterMap, dashboardFilterMap, context, funcDTLevel) {
         if (context.datatype !== 'datetime') {
             return;
         }
