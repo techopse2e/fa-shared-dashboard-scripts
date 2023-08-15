@@ -87,6 +87,7 @@
 
     calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime) {
         if (this.isYearFunction(func_level)) {
+            debugger
             startDatetime.setUTCMonth(0, 1);
             endDatetime.setUTCMonth(11, 31);
             endDatetime.setUTCHours(23, 59, 59, 999);
