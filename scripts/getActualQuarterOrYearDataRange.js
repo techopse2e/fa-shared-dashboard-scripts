@@ -42,7 +42,6 @@
                     if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1];
                         if (typeof this[funcName] === 'function') {
-                            debugger
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
                     }
@@ -87,9 +86,7 @@
     }
 
     calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime) {
-        debugger
         if (this.isYearFunction(func_level)) {
-            debugger
             startDatetime.setUTCMonth(0, 1);
             endDatetime.setUTCMonth(11, 31);
             endDatetime.setUTCHours(23, 59, 59, 999);
@@ -128,7 +125,6 @@
         }
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
-        debugger
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
             const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel);
             context.level = 'days';
@@ -140,12 +136,10 @@
     }
 
     __WHOLE_YEAR(activeFilterMap, dashboardFilterMap, context) {
-        debugger
         this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'years');
     }
 
     __WHOLE_QUARTER(activeFilterMap, dashboardFilterMap, context) {
-        debugger
         this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'quarters');
     }
 
