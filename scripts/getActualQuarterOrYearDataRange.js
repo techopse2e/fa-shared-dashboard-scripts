@@ -86,6 +86,7 @@
     }
 
     calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime) {
+        debugger
         if (this.isYearFunction(func_level)) {
             debugger
             startDatetime.setUTCMonth(0, 1);
@@ -126,6 +127,7 @@
         }
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
+        debugger
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
             const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel);
             context.level = 'days';
