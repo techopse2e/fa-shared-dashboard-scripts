@@ -42,6 +42,7 @@
                     if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1];
                         if (typeof this[funcName] === 'function') {
+                            debugger
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
                     }
@@ -139,10 +140,12 @@
     }
 
     __WHOLE_YEAR(activeFilterMap, dashboardFilterMap, context) {
+        debugger
         this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'years');
     }
 
     __WHOLE_QUARTER(activeFilterMap, dashboardFilterMap, context) {
+        debugger
         this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'quarters');
     }
 
