@@ -29,30 +29,19 @@
         return filterValueMap;
     }
 
-    isWidgetValues(metadata) {
-        // use to filter the left widget values
-        return metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure');
-    }
-
-    isWidgetFilters(metadata) {
-        // use to filter the right widget filters
-        return metadata.panel === 'scope' && metadata.jaql.filter.hasOwnProperty('by');
-    }
-
-    isContextKey(contextKey) {
-        return contextKey.startsWith('[') && !contextKey.endsWith('[');
-    }
-
     initialize() {
         dashboard.on('widgetbeforequery', (widget, query) => {
+
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
 
-            query.query.metadata.filter(metadata => isWidgetValues(metadata)).forEach(metadata => {
+            query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
+				// use to filter the left widget values
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
-                    if (!isContextKey(contextKey)) {
+                    if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
                     }
+
                     if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1];
                         if (typeof this[funcName] === 'function') {
@@ -62,14 +51,15 @@
                 }
             });
 
-            query.query.metadata.filter(metadata => isWidgetFilters(metadata)).forEach(metadata => {
+            query.query.metadata.filter(metadata => metadata.panel === 'scope' && metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
+				// use to filter the right widget filters
                 for (let [contextKey, context] of Object.entries(metadata.jaql.filter.by.context)) {
-                    if (!isContextKey(contextKey)) {
+                    if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
                     }
 
                     if (context.title.startsWith('@')) {
-                        const funcName = '__' + context.title.split('@')[1];
+                        const funcName = '__' + context.title.split('@')[1].split('(')[0];
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
