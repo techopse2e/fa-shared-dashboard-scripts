@@ -36,7 +36,7 @@
             const dashboardFilterMap = this.getDashboardFilterMap();
 
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
-				// use to filter the left widget values
+	        // use to filter the left widget values
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
@@ -52,7 +52,7 @@
             });
 
             query.query.metadata.filter(metadata => metadata.panel === 'scope' && metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
-				// use to filter the right widget filters
+		// use to filter the right widget filters
                 for (let [contextKey, context] of Object.entries(metadata.jaql.filter.by.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
