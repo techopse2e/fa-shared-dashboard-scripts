@@ -43,7 +43,7 @@
                     }
 
                     if (context.title.startsWith('@')) {
-                        const funcName = '__' + context.title.split('@')[1];
+                        const funcName = '__' + context.title.split('@')[1].split('(')[0];
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
