@@ -31,16 +31,19 @@
 
     initialize() {
         dashboard.on('widgetbeforequery', (widget, query) => {
+
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
 
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
+	        // use to filter the left widget values
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
                     }
+
                     if (context.title.startsWith('@')) {
-                        const funcName = '__' + context.title.split('@')[1];
+                        const funcName = '__' + context.title.split('@')[1].split('(')[0];
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
@@ -49,13 +52,14 @@
             });
 
             query.query.metadata.filter(metadata => metadata.panel === 'scope' && metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
+		// use to filter the right widget filters
                 for (let [contextKey, context] of Object.entries(metadata.jaql.filter.by.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
                     }
 
                     if (context.title.startsWith('@')) {
-                        const funcName = '__' + context.title.split('@')[1];
+                        const funcName = '__' + context.title.split('@')[1].split('(')[0];
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
@@ -90,13 +94,17 @@
             startDatetime.setUTCMonth(0, 1);
             endDatetime.setUTCMonth(11, 31);
             endDatetime.setUTCHours(23, 59, 59, 999);
-        } else if (this.isQuarterFunction(func_level)) {
+            return;
+        } 
+        
+        if (this.isQuarterFunction(func_level)) {
             const quarterStartMonth = Math.floor(startDatetime.getUTCMonth() / 3) * 3;
             startDatetime.setUTCMonth(quarterStartMonth, 1);
 
             const quarterEndMonth = Math.floor(endDatetime.getUTCMonth() / 3) * 3 + 2;
             endDatetime.setUTCMonth(quarterEndMonth + 1, 0);
             endDatetime.setUTCHours(23, 59, 59, 999);
+            return;
         }
 
     }
