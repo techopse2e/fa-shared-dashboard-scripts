@@ -30,6 +30,7 @@
         dashboard.on('widgetbeforequery', (widget, query) => {
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
+            debugger
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
