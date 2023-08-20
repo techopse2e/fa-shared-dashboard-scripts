@@ -19,9 +19,11 @@
     getDashboardFilterMap() {
         const filterValueMap = new Map();
         prism.activeDashboard.filters.$$items.forEach(metadata => {
-            if (metadata.hasOwnProperty('levels') && !metadata.levels.hasOwnProperty('filter')) {
+            if (metadata.hasOwnProperty('levels')) {
                 metadata.levels.forEach(jaql => {
-                    filterValueMap.set(this.getFilterKey(jaql), jaql);
+                    if (jaql.filter.filter === undefined) {
+                        filterValueMap.set(this.getFilterKey(jaql), jaql);
+                    }
                 });
             } else {
                 filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
@@ -35,7 +37,7 @@
 
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
-            debugger
+
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
                 // use to filter the left widget values
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
@@ -139,7 +141,6 @@
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
-            // srcFilterItem.level
             const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
             context.level = 'days';
             context.filter = {
