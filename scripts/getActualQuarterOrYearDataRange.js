@@ -11,6 +11,7 @@
     getActiveFilterMap(query) {
         const filterValueMap = new Map();
         query.query.metadata.filter(metadata => metadata.panel === 'scope' && !metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
+            console.log('metadata__:', metadata)
             filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
         });
         return filterValueMap;
