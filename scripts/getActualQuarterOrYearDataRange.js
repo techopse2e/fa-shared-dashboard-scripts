@@ -35,7 +35,7 @@
 
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
-
+            debugger
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
                 // use to filter the left widget values
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
