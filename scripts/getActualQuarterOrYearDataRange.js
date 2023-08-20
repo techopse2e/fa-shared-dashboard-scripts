@@ -142,6 +142,10 @@
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
+            console.log('activeFilterMap__:', activeFilterMap)
+            console.log('dashboardFilterMap__:', dashboardFilterMap)
+            console.log('srcFilterItem.level__:', srcFilterItem.level)
+            console.log('srcFilterItem.filter.members[0]__:', srcFilterItem.filter.members[0])
             const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
             context.level = 'days';
             context.filter = {
