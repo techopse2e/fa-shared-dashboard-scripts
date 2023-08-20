@@ -11,7 +11,6 @@
     getActiveFilterMap(query) {
         const filterValueMap = new Map();
         query.query.metadata.filter(metadata => metadata.panel === 'scope' && !metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
-            console.log('metadata__:', metadata)
             if (metadata.jaql.filter.filter === undefined) {
                 filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
             }
@@ -50,7 +49,6 @@
 
                     if (context.title.startsWith('@')) {
                         const funcName = '__' + context.title.split('@')[1].split('(')[0];
-                         console.log('__:', funcName)
                         if (typeof this[funcName] === 'function') {
                             this[funcName](activeFilterMap, dashboardFilterMap, context);
                         }
@@ -145,10 +143,6 @@
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
-            console.log('activeFilterMap__:', activeFilterMap)
-            console.log('dashboardFilterMap__:', dashboardFilterMap)
-            console.log('srcFilterItem.level__:', srcFilterItem.level)
-            console.log('srcFilterItem.filter.members[0]__:', srcFilterItem.filter.members[0])
             const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
             context.level = 'days';
             context.filter = {
