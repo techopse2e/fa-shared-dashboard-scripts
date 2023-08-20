@@ -19,7 +19,7 @@
     getDashboardFilterMap() {
         const filterValueMap = new Map();
         prism.activeDashboard.filters.$$items.forEach(metadata => {
-            if (metadata.hasOwnProperty('levels') && metadata.levels.hasOwnProperty('filter')) {
+            if (metadata.hasOwnProperty('levels') && !metadata.levels.hasOwnProperty('filter')) {
                 metadata.levels.forEach(jaql => {
                     filterValueMap.set(this.getFilterKey(jaql), jaql);
                 });
