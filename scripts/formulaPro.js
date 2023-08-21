@@ -15,7 +15,7 @@
     getDashboardFilterMap() {
         const filterValueMap = new Map();
         prism.activeDashboard.filters.$$items.forEach(metadata => {
-            if (metadata.hasOwnProperty('levels') && !metadata.levels.hasOwnProperty('filter')) {
+            if (metadata.hasOwnProperty('levels')) {
                 metadata.levels.forEach(jaql => {
                     filterValueMap.set(this.getFilterKey(jaql), jaql);
                 });
@@ -30,7 +30,6 @@
         dashboard.on('widgetbeforequery', (widget, query) => {
             const activeFilterMap = this.getActiveFilterMap(query);
             const dashboardFilterMap = this.getDashboardFilterMap();
-            debugger
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
