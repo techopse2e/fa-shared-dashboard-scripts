@@ -7,10 +7,13 @@
     getFilterKey(jaql) {
         return `${jaql.dim} | ${jaql.level}`
     }
+
     getActiveFilterMap(query) {
         const filterValueMap = new Map();
         query.query.metadata.filter(metadata => metadata.panel === 'scope' && !metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
-            filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
+            if (metadata.jaql.filter.filter === undefined) {
+                filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
+            }
         });
         return filterValueMap;
     }
@@ -20,7 +23,9 @@
         prism.activeDashboard.filters.$$items.forEach(metadata => {
             if (metadata.hasOwnProperty('levels')) {
                 metadata.levels.forEach(jaql => {
-                    filterValueMap.set(this.getFilterKey(jaql), jaql);
+                    if (jaql.filter.filter === undefined) {
+                        filterValueMap.set(this.getFilterKey(jaql), jaql);
+                    }
                 });
             } else {
                 filterValueMap.set(this.getFilterKey(metadata.jaql), metadata.jaql);
@@ -36,7 +41,7 @@
             const dashboardFilterMap = this.getDashboardFilterMap();
 
             query.query.metadata.filter(metadata => metadata.wpanel === 'series' || (metadata.jaql && metadata.jaql.type === 'measure')).forEach(metadata => {
-	        // use to filter the left widget values
+                // use to filter the left widget values
                 for (let [contextKey, context] of Object.entries(metadata.jaql.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
@@ -52,7 +57,7 @@
             });
 
             query.query.metadata.filter(metadata => metadata.panel === 'scope' && metadata.jaql.filter.hasOwnProperty('by')).forEach(metadata => {
-		// use to filter the right widget filters
+                // use to filter the right widget filters
                 for (let [contextKey, context] of Object.entries(metadata.jaql.filter.by.context)) {
                     if (!(contextKey.startsWith('[') && !contextKey.endsWith('['))) {
                         continue;
@@ -71,14 +76,14 @@
         });
     }
 
-    calculateDateTimeRange(dt, func_level) {
+    calculateDateTimeRange(dt, func_level, filter_level) {
         const startDatetime = new Date(dt + 'Z');
         const endDatetime = new Date(dt + 'Z');
 
         startDatetime.setUTCHours(0, 0, 0, 0);
         endDatetime.setUTCHours(23, 59, 59, 999);
 
-        this.calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime);
+        this.calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime, filter_level);
 
         console.log('startDatetime: ', startDatetime)
         console.log('endDatetime: ', endDatetime)
@@ -89,14 +94,14 @@
         };
     }
 
-    calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime) {
+    calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime, filter_level) {
         if (this.isYearFunction(func_level)) {
             startDatetime.setUTCMonth(0, 1);
             endDatetime.setUTCMonth(11, 31);
             endDatetime.setUTCHours(23, 59, 59, 999);
             return;
-        } 
-        
+        }
+
         if (this.isQuarterFunction(func_level)) {
             const quarterStartMonth = Math.floor(startDatetime.getUTCMonth() / 3) * 3;
             startDatetime.setUTCMonth(quarterStartMonth, 1);
@@ -104,6 +109,10 @@
             const quarterEndMonth = Math.floor(endDatetime.getUTCMonth() / 3) * 3 + 2;
             endDatetime.setUTCMonth(quarterEndMonth + 1, 0);
             endDatetime.setUTCHours(23, 59, 59, 999);
+
+            if (filter_level === 'years') {
+                endDatetime.setTime(0);
+            }
             return;
         }
 
@@ -134,7 +143,7 @@
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
-            const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel);
+            const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
             context.level = 'days';
             context.filter = {
                 from: dateRange.start_datetime,
