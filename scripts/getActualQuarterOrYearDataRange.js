@@ -2,6 +2,10 @@
 // example:
 // given 2023-04-01 and level is quarter, will return 2023-04-01 - 2023-06-30
 // given 2022-10-01 and level is year, will return 2022-01-01 - 2022-12-31
+//
+// add a func to get last whole year
+// example:
+// given 2022-10-01 and level is last_year, will return 2021-01-01 - 2021-12-31
 
 (class WholeQuarterOrYearDataRange {
     getFilterKey(jaql) {
@@ -95,10 +99,19 @@
     }
 
     calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime, filter_level) {
+        endDatetime.setUTCHours(23, 59, 59, 999);
+
         if (this.isYearFunction(func_level)) {
             startDatetime.setUTCMonth(0, 1);
             endDatetime.setUTCMonth(11, 31);
-            endDatetime.setUTCHours(23, 59, 59, 999);
+            return;
+        }
+
+        if (this.isLastYearFunction(func_level)) {
+            startDatetime.setUTCFullYear(startDatetime.getUTCFullYear() - 1);
+            startDatetime.setUTCMonth(0, 1);
+            endDatetime.setUTCFullYear(endDatetime.getUTCFullYear() - 1)
+            endDatetime.setUTCMonth(11, 31);
             return;
         }
 
@@ -108,7 +121,6 @@
 
             const quarterEndMonth = Math.floor(endDatetime.getUTCMonth() / 3) * 3 + 2;
             endDatetime.setUTCMonth(quarterEndMonth + 1, 0);
-            endDatetime.setUTCHours(23, 59, 59, 999);
 
             if (filter_level === 'years') {
                 endDatetime.setTime(0);
@@ -124,6 +136,10 @@
 
     isYearFunction(func_level) {
         return func_level === 'years';
+    }
+
+    isLastYearFunction(func_level) {
+        return func_level === 'last_year';
     }
 
     getMostDetailedDateFilter(filterValueMap, context) {
@@ -160,4 +176,7 @@
         this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'quarters');
     }
 
+    __LAST_WHOLE_YEAR(activeFilterMap, dashboardFilterMap, context) {
+        this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'last_year');
+    }
 })
