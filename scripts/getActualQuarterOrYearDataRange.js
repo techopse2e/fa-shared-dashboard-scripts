@@ -7,6 +7,11 @@
 // example:
 // given 2022-10-01 and level is last_year, will return 2021-01-01 - 2021-12-31
 
+// add another func to get whole year but till today
+// example: current date is 2023-09-12
+// given 2023-10-01, level is year and specify `isTillToday` is true, will return 2023-01-01 - 2023-09-12
+// given 2024-10-01, level is year and specify `isTillToday` is true, will return 2024-01-01 - 2023-12-31 to not display data
+
 (class WholeQuarterOrYearDataRange {
     getFilterKey(jaql) {
         return `${jaql.dim} | ${jaql.level}`
@@ -80,14 +85,30 @@
         });
     }
 
-    calculateDateTimeRange(dt, func_level, filter_level) {
+    compareDateInUtcTimeZone(firstDate, secondDate) {
+        const first = new Date(firstDate.toUTCString());
+        const second = new Date(secondDate.toUTCString());
+        return first > second;
+    }
+
+    calculateDateTimeRange(dt, func_level, filter_level, isTillToday) {
         const startDatetime = new Date(dt + 'Z');
-        const endDatetime = new Date(dt + 'Z');
+        let endDatetime = new Date(dt + 'Z');
 
         startDatetime.setUTCHours(0, 0, 0, 0);
         endDatetime.setUTCHours(23, 59, 59, 999);
 
         this.calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime, filter_level);
+
+        const now = new Date();
+        if (isTillToday && this.compareDateInUtcTimeZone(endDatetime, now)) {
+            endDatetime.setUTCFullYear(now.getUTCFullYear());
+            endDatetime.setUTCMonth(now.getUTCMonth(), now.getUTCDate()-1);
+        }
+        if (isTillToday && this.compareDateInUtcTimeZone(startDatetime, now)) {
+			endDatetime = startDatetime;
+            endDatetime.setUTCDate(startDatetime.getUTCDate()-1);
+        }
 
         console.log('startDatetime: ', startDatetime)
         console.log('endDatetime: ', endDatetime)
@@ -99,7 +120,6 @@
     }
 
     calculateDateRangeBeforeOffset(func_level, startDatetime, endDatetime, filter_level) {
-        endDatetime.setUTCHours(23, 59, 59, 999);
 
         if (this.isYearFunction(func_level)) {
             startDatetime.setUTCMonth(0, 1);
@@ -145,6 +165,7 @@
     getMostDetailedDateFilter(filterValueMap, context) {
         for (let dateLevel of ['days', 'months', 'quarters', 'years']) {
             const filterKey = `${context.dim} | ${dateLevel}`
+
             if (filterValueMap.has(filterKey) && filterValueMap.get(filterKey).filter.hasOwnProperty('members')) {
                 return filterValueMap.get(filterKey);
             }
@@ -152,14 +173,14 @@
         return null;
     }
 
-    WholeDataRange(activeFilterMap, dashboardFilterMap, context, funcDTLevel) {
+    WholeDataRange(activeFilterMap, dashboardFilterMap, context, funcDTLevel, isTillToday = false) {
         if (context.datatype !== 'datetime') {
             return;
         }
 
         const srcFilterItem = this.getMostDetailedDateFilter(activeFilterMap, context) || this.getMostDetailedDateFilter(dashboardFilterMap, context);
         if (srcFilterItem && srcFilterItem.filter.members.length === 1) {
-            const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level);
+            const dateRange = this.calculateDateTimeRange(srcFilterItem.filter.members[0], funcDTLevel, srcFilterItem.level, isTillToday);
             context.level = 'days';
             context.filter = {
                 from: dateRange.start_datetime,
@@ -178,5 +199,9 @@
 
     __LAST_WHOLE_YEAR(activeFilterMap, dashboardFilterMap, context) {
         this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'last_year');
+    }
+
+	__WHOLE_YEAR_TILL_TODAY(activeFilterMap, dashboardFilterMap, context) {
+        this.WholeDataRange(activeFilterMap, dashboardFilterMap, context, 'years', true);
     }
 })
